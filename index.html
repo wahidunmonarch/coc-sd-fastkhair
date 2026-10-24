@@ -39,6 +39,8 @@ const ST=Object.assign({mv:.5,music:true,sfx:true},JSON.parse(localStorage.getIt
 let AC,mi,mn=0;const NT=[220,262,330,262,196,247,294,247];
 function tone(f,d,t,v){if(v<=0)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
 const sfx=(f,d=.15,t='triangle')=>ST.sfx&&tone(f,d,t,.2);
+let VC=null;const pv=()=>{try{VC=speechSynthesis.getVoices().find(v=>/^id/i.test(v.lang))||null}catch(e){}};try{pv();speechSynthesis.onvoiceschanged=pv}catch(e){}
+function say(t){if(!ST.sfx)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='id-ID';if(VC)u.voice=VC;u.pitch=.6;u.rate=.85;u.volume=1;speechSynthesis.speak(u)}catch(e){}}
 const BG={lobby:new Audio('backsound_lobby.mp3'),game:new Audio('backsound_in_game.mp3')};for(const n in BG){BG[n].loop=true;BG[n].preload='auto'}
 function music(){const k=scr==='game'?'game':'lobby';for(const n in BG){const a=BG[n];a.volume=Math.max(0,Math.min(1,ST.mv));if(n===k&&ST.music)a.play().catch(()=>{});else a.pause()}}
 addEventListener('click',music,{once:true});
@@ -177,14 +179,14 @@ async function send(i,v,n=0){try{const ok=await rpc('submit_answer',{p_pid:ME,p_
 function startSolo(){if(!cfg.name.trim())return toast('Isi nama dulu');G=initG(true,{grade:cfg.grade,subj:cfg.subj,secs:Math.max(5,cfg.secs||20),target:Math.max(10,cfg.target||100)},Math.floor(Math.random()*1e6));G.me.name=cfg.name.trim();go('game')}
 function startGame(){if(G&&scr==='game')return;const me=P.find(p=>p.id===ME);G=initG(false,{grade:ROOM.grade,subj:ROOM.subject,secs:ROOM.secs,target:ROOM.target},ROOM.seed*31+parseInt(ME.slice(0,6),16)%1000000);G.i=me?me.answered:0;go('game')}
 function showQ(){if(G.i>=100){$('#q').textContent='Kamu sudah menyelesaikan semua soal. Menunggu pemain lain…';$('#opts').innerHTML='';$('#tb').style.width='0';return upd()}
- const q=getQ(G.i);G.lock=false;G.t0=performance.now();if(G.pz)G.pz=G.t0;$('#qn').textContent=`Soal ${G.i+1}/100`;$('#q').textContent=q.q;
+ const q=getQ(G.i);G.lock=false;G.w10=false;G.t0=performance.now();if(G.pz)G.pz=G.t0;$('#qn').textContent=`Soal ${G.i+1}/100`;$('#q').textContent=q.q;
  $('#opts').innerHTML=q.opts.map((o,j)=>`<button class="opt" onclick="ans(${j})"><b>${'ABCD'[j]}.</b> ${esc(o)}</button>`).join('');$('#fb').innerHTML='';$('#prog').style.width=G.i+'%';
- clearInterval(tm);tm=setInterval(()=>{if(G.pz)return;const l=G.cfg.secs-(performance.now()-G.t0)/1000;$('#tb').style.width=Math.max(0,l/G.cfg.secs*100)+'%';$('#tt').textContent=Math.max(0,Math.ceil(l))+' dtk';if(l<=0)ans(-1)},100);upd()}
+ clearInterval(tm);tm=setInterval(()=>{if(G.pz)return;const l=G.cfg.secs-(performance.now()-G.t0)/1000;$('#tb').style.width=Math.max(0,l/G.cfg.secs*100)+'%';$('#tt').textContent=Math.max(0,Math.ceil(l))+' dtk';if(l<=10&&!G.w10&&G.cfg.secs>10){G.w10=true;say('Waktu tersisa 10 detik')}if(l<=0)ans(-1)},100);upd()}
 function flt(t,c){const d=document.createElement('div');d.className='fl';d.textContent=t;d.style.color=c;document.body.appendChild(d);setTimeout(()=>d.remove(),1000)}
 function ans(c){if(!G||G.lock||G.i>=100||!G.run||G.pz)return;G.lock=true;clearInterval(tm);const q=getQ(G.i),v=c<0?0:c===q.ans?1:-1;
  document.querySelectorAll('.opt').forEach((b,j)=>{b.disabled=true;b.style.opacity=1;if(j===q.ans)b.classList.add('ok');else if(j===c)b.classList.add('no')});
  $('#fb').innerHTML=`<div class="card"><b>${v>0?'✅ Benar! +5':v<0?'❌ Salah −5':c==-1?'⏰ Waktu habis (0)':'⏭️ Dilewati (0)'}</b><br><small>${esc(q.e)}</small></div>`;
- if(v>0){sfx(660);setTimeout(()=>sfx(880),90)}else if(v<0)sfx(180,.3,'sawtooth');
+ if(v>0){sfx(660);setTimeout(()=>sfx(880),90);setTimeout(()=>say('Jawaban benar!'),250)}else if(v<0){sfx(180,.3,'sawtooth');setTimeout(()=>say('Jawaban salah!'),250)}
  if(v)flt(v>0?'+5':'−5',v>0?'#3ddc84':'#ff5d73');if(v<0)G.miss[q.c]=(G.miss[q.c]||0)+1;
  if(G.solo){const m=G.me;m.score+=v*5;m.answered++;if(v>0)m.correct++;if(v<0)m.wrong++}else send(G.i,v);
  upd();setTimeout(()=>{if(!G||!G.run)return;G.i++;if(G.solo&&(G.me.score>=G.cfg.target||G.i>=100))return end();showQ()},v?1700:1300)}
@@ -202,7 +204,7 @@ async function end(){clearInterval(tm);if(!G)G=initG(false,{grade:ROOM.grade,sub
 /* ---------- LAYAR ---------- */
 const seg=(k,o)=>`<div class="seg">${o.map(([v,l])=>`<button class="${cfg[k]===v?'on':''}" onclick="S('${k}',${typeof v==='number'?v:`'${v}'`})">${l}</button>`).join('')}</div>`;
 const S=(k,v)=>{cfg[k]=v;sfx(600,.06);draw()},I=(k,v)=>cfg[k]=v,go=s=>{scr=s;draw()};
-const logo=`<div class="c"><svg viewBox="0 0 100 110" width="90"><path d="M50 4 94 20v34c0 28-20 46-44 54C26 100 6 82 6 54V20z" fill="#ffc83d"/><path d="M50 14 84 27v27c0 22-15 37-34 44C31 91 16 76 16 54V27z" fill="#13294f"/><path d="m50 30 7 15 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z" fill="#19d3c5"/></svg></div>`;
+const logo=`<div class="c"><img src="logo.png" alt="Clash of Champions" style="width:min(560px,92%);height:auto;filter:drop-shadow(0 6px 18px #000a)"></div>`;
 /* ---------- GABUNG ROOM (daftar room otomatis) ---------- */
 let RL=[],rlT=null;const rmf=c=>RL.find(r=>r.code===c);
 const jtH=()=>{const r=rmf(cfg.code);return r&&r.mode==='team'?`<label>Tim kamu</label>${seg('jt',[[0,'Tim 1'],[1,'Tim 2'],[2,'Tim 3'],[3,'Tim 4']].slice(0,r.maxp||4))}`:''};
