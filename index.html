@@ -139,7 +139,7 @@ GK[6].push(
 ...QP('Penemu bola lampu pijar yang praktis:Thomas Edison;Penemu telepon:Alexander Graham Bell;Penemu pesawat terbang pertama:Wright bersaudara;Penemu teori relativitas:Albert Einstein;Penemu hukum gravitasi:Isaac Newton;Penemu mesin cetak modern di Eropa:Johannes Gutenberg;Penemu obat penisilin:Alexander Fleming;Penjelajah Eropa yang tiba di benua Amerika tahun 1492:Christopher Columbus',k=>k+' adalah ...',0,'Tokoh dunia',[],1));
 
 /* ---------- STATE ---------- */
-let scr='home',cfg={name:'',grade:4,subj:'mat',target:100,secs:20,mode:'ind',maxp:2,code:'',jt:0,kind:'solo'},G=null,RM=null,ROOM=null,P=[],ME=null,MOD=false,tm=null,pollT=null,ch=null,conn=true;
+let scr='home',cfg={name:'',grade:4,subj:'mat',target:100,secs:20,mode:'ind',maxp:2,code:'',jt:0,kind:'solo',role:'join'},G=null,RM=null,ROOM=null,P=[],ME=null,MOD=false,tm=null,pollT=null,ch=null,conn=true;
 const GL={umum:'Umum',mat:'Matematika',ipas:'IPAS'};let BT=false;
 const dd=a=>[...new Map(a.map(x=>[x[0],x])).values()];
 function initG(solo,c,seed){const R=rng(seed+3),ip=[],gk=[];for(let g=4;g<=c.grade;g++){ip.push(...IP[g]);gk.push(...GK[g])}
@@ -203,6 +203,18 @@ async function end(){clearInterval(tm);if(!G)G=initG(false,{grade:ROOM.grade,sub
 const seg=(k,o)=>`<div class="seg">${o.map(([v,l])=>`<button class="${cfg[k]===v?'on':''}" onclick="S('${k}',${typeof v==='number'?v:`'${v}'`})">${l}</button>`).join('')}</div>`;
 const S=(k,v)=>{cfg[k]=v;sfx(600,.06);draw()},I=(k,v)=>cfg[k]=v,go=s=>{scr=s;draw()};
 const logo=`<div class="c"><svg viewBox="0 0 100 110" width="90"><path d="M50 4 94 20v34c0 28-20 46-44 54C26 100 6 82 6 54V20z" fill="#ffc83d"/><path d="M50 14 84 27v27c0 22-15 37-34 44C31 91 16 76 16 54V27z" fill="#13294f"/><path d="m50 30 7 15 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z" fill="#19d3c5"/></svg></div>`;
+/* ---------- GABUNG ROOM (daftar room otomatis) ---------- */
+let RL=[],rlT=null;const rmf=c=>RL.find(r=>r.code===c);
+const jtH=()=>{const r=rmf(cfg.code);return r&&r.mode==='team'?`<label>Tim kamu</label>${seg('jt',[[0,'Tim 1'],[1,'Tim 2'],[2,'Tim 3'],[3,'Tim 4']].slice(0,r.maxp||4))}`:''};
+const rlH=()=>RL.length?RL.map(r=>`<button class="mc" style="margin:6px 0;width:100%;${r.code===cfg.code?'outline:2px solid #ffc83d;':''}" onclick="pickRoom('${esc(r.code)}')"><b>${esc(r.code)}</b><small>Kelas ${r.grade} · ${GL[r.subject]||''} · ${r.mode==='team'?'Beregu':'Individu'} · target ${r.target} poin · ${r.secs} dtk/soal · ${r.n} ${r.mode==='team'?'peserta':'/ '+r.maxp+' pemain'}</small></button>`).join(''):'<p class="c" style="opacity:.7">Belum ada room. Menunggu moderator membuat room…</p>';
+function paintRL(){const d=$('#rl'),t=$('#jt');if(d)d.innerHTML=rlH();if(t)t.innerHTML=jtH()}
+async function loadRooms(){if(!sb)return;try{const a=await sb.from('rooms').select('*').eq('status','waiting').limit(20);if(a.error)throw 0;const cs=a.data.map(r=>r.code);let ps=[];if(cs.length){const b=await sb.from('players').select('id,room').in('room',cs);if(!b.error)ps=b.data}RL=a.data.map(r=>({...r,n:ps.filter(p=>p.room===r.code&&p.id!==r.host).length}))}catch(e){RL=[]}paintRL()}
+function rlSync(){const need=scr==='setup'&&cfg.kind!=='solo'&&cfg.role==='join';if(need){if(!rlT)rlT=setInterval(loadRooms,3000);loadRooms()}else if(rlT){clearInterval(rlT);rlT=null}}
+function onCode(v){cfg.code=v;paintRL()}
+function pickRoom(c){cfg.code=c;cfg.jt=0;const i=$('#jc');if(i)i.value=c;paintRL();sfx(600,.06)}
+const TABS=J=>`<div class="card"><div class="seg"><button class="${J?'':'on'}" onclick="S('role','mk')">🛡️ Buat Room (Moderator)</button><button class="${J?'on':''}" onclick="S('role','join')">🙋 Gabung Room</button></div></div>`;
+const JN=()=>`<div class="card"><h3>Gabung ke room</h3><p style="font-size:.85rem;opacity:.8">Kelas, pelajaran, dan mode sudah diatur moderator. Cukup isi nama dan kode room.</p><label>Nama pemain / kelompok</label><input maxlength=16 value="${esc(cfg.name)}" oninput="I('name',this.value)" placeholder="Nama kamu"><label>Kode room</label><input id="jc" maxlength=5 value="${esc(cfg.code)}" oninput="this.value=this.value.toUpperCase();onCode(this.value)" placeholder="ABCDE"><div id="jt">${jtH()}</div><button class="big alt" onclick="joinRoom()">Gabung</button></div>
+<div class="card"><h3>Room tersedia</h3><p style="font-size:.8rem;opacity:.7">Room buatan moderator muncul otomatis di sini. Ketuk room untuk mengisi kodenya.</p><div id="rl">${rlH()}</div></div>`;
 const SC={
 home:()=>`<div class="wrap">${logo}<div class="sub">SD FASTABIQUL KHAIRAT</div><h1>Clash of Champions</h1><p class="c" style="opacity:.8">Kompetisi akademik kelas 4, 5 &amp; 6</p>
 <div class="card"><button class="big go" onclick="go('mode')">▶ Mulai</button>${localStorage.getItem('fk_sess')?`<button class="big alt" onclick="resume()">↩ Lanjutkan room online</button>`:''}<button class="big" onclick="showSet()">⚙️ Pengaturan</button><button class="big" onclick="quit()">🚪 Keluar</button></div></div>`,
@@ -210,18 +222,18 @@ mode:()=>`<div class="wrap"><button class="back" onclick="go('home')">← Kembal
 <button class="mc" onclick="cfg.kind='solo';go('setup')"><b>🎯 Main Solo</b><small>Main sendiri, kejar skor tertinggi</small></button>
 <button class="mc" onclick="cfg.kind='online';go('setup')"><b>🌐 Main Online</b><small>Room berkode, 2–4 pemain/tim</small></button>
 <button class="mc" onclick="cfg.kind='battle';cfg.maxp=2;go('setup')"><b>⚔️ Battle 1 vs 1</b><small>Duel dua pemain atau dua tim</small></button></div></div>`,
-setup:()=>{const on=cfg.kind!=='solo';return`<div class="wrap"><button class="back" onclick="go('mode')">← Kembali</button><h1>${{solo:'Main Solo',online:'Main Online',battle:'Battle 1 vs 1'}[cfg.kind]}</h1>
-<div class="card"><label>Nama pemain</label><input maxlength=16 value="${esc(cfg.name)}" oninput="I('name',this.value)" placeholder="Nama kamu">
+setup:()=>{const on=cfg.kind!=='solo',J=on&&cfg.role==='join';return`<div class="wrap"><button class="back" onclick="go('mode')">← Kembali</button><h1>${{solo:'Main Solo',online:'Main Online',battle:'Battle 1 vs 1'}[cfg.kind]}</h1>
+${on?TABS(J):''}${J?'':`<div class="card"><label>Nama pemain</label><input maxlength=16 value="${esc(cfg.name)}" oninput="I('name',this.value)" placeholder="Nama kamu">
 <label>Kelas</label>${seg('grade',[[4,'Kelas 4'],[5,'Kelas 5'],[6,'Kelas 6']])}<label>Mata pelajaran</label>${seg('subj',[['umum','Umum'],['mat','Matematika'],['ipas','IPAS']])}
 ${on?`<label>Mode</label>${seg('mode',[['ind','Individu'],['team','Beregu']])}`:''}${on&&cfg.kind==='online'&&cfg.mode==='ind'?`<label>Jumlah pemain</label>${seg('maxp',[[2,'2'],[3,'3'],[4,'4']])}`:''}${on&&cfg.kind==='online'&&cfg.mode==='team'?'<p style="font-size:.85rem;opacity:.8">Beregu: Tim 1–4 bisa bergabung. Mulai jika minimal 2 tim sudah ada.</p>':''}
 <div class="row"><div><label>Target poin</label><input type=number min=10 max=500 step=5 value=${cfg.target} oninput="I('target',+this.value)"></div><div><label>Detik / soal</label><input type=number min=5 max=120 value=${cfg.secs} oninput="I('secs',+this.value)"></div></div>
 <p style="font-size:.8rem;opacity:.7">Aturan: benar +5, salah −5, lewat/waktu habis 0. Maks 100 soal per pemain, soal &amp; pilihan diacak.</p>
-${on?'<p style="font-size:.85rem;color:#ffc83d">🛡️ Pembuat room menjadi moderator: memantau pertandingan, tidak ikut bermain.</p>':''}<button class="big go" onclick="${on?'mkRoom()':'startSolo()'}">${on?'Buat Room':'Mulai Main'}</button></div>
-${on?`<div class="card"><h3>Gabung ke room</h3><label>Kode room</label><input maxlength=5 value="${esc(cfg.code)}" oninput="this.value=this.value.toUpperCase();I('code',this.value)" placeholder="ABCDE"><label>Nomor tim (jika beregu)</label>${seg('jt',[[0,'Tim 1'],[1,'Tim 2'],[2,'Tim 3'],[3,'Tim 4']].slice(0,cfg.kind==='battle'?2:4))}<button class="big alt" onclick="joinRoom()">Gabung</button></div>`:''}</div>`},
+${on?'<p style="font-size:.85rem;color:#ffc83d">🛡️ Pembuat room menjadi moderator: memantau pertandingan, tidak ikut bermain.</p>':''}<button class="big go" onclick="${on?'mkRoom()':'startSolo()'}">${on?'Buat Room':'Mulai Main'}</button></div>`}
+${J?JN():''}</div>`},
 lobby:()=>{const r=ROOM||{},host=r.host===ME,t=r.mode==='team',ok=t?new Set(P.map(p=>p.team)).size>1:P.length>1;
  return`<div class="wrap"><div><span class="dot${conn?'':' off'}" id="cd"></span>${conn?'Terhubung':'Terputus – mencoba lagi…'}</div><div class="card"><div class="c">Kode room</div><div class="code">${esc(RM)}</div><p class="c">Kelas ${r.grade} · ${GL[r.subject]||''} · target ${r.target} poin · ${r.secs} dtk/soal · ${t?'Beregu ('+r.maxp+' tim)':'Individu (maks '+r.maxp+')'}</p></div>
 ${MOD?'<p class="c">🛡️ Kamu moderator room ini (tidak ikut bermain). Bagikan kode ke pemain.</p>':''}<div class="card"><h3>Pemain (${P.length})</h3><div class="lb">${P.map(p=>`<div class="${p.id===ME?'me':''}"><span>${p.id===r.host?'👑 ':''}${esc(p.name)}</span><span>${t?'Tim '+(p.team+1):'Siap'}</span></div>`).join('')}</div></div>
-${host?`<button class="big go" ${ok?'':'disabled'} onclick="startRoom()">${ok?'▶ Mulai Pertandingan':'Menunggu minimal 2 '+(t?'tim':'pemain')+'…'}</button>`:'<p class="c">Menunggu moderator memulai…</p>'}
+${host?`<button class="big go" ${ok?'':'disabled'} onclick="startRoom()">${ok?'▶ Mulai Pertandingan':'Menunggu minimal 2 '+(t?'tim':'pemain')+'…'}</button>`:`<p class="c">${ok?'✅ Syarat pemain/tim sudah terpenuhi. Menunggu moderator menekan Play…':'Menunggu pemain/tim lain bergabung…'}</p>`}
 <button class="big" onclick="leave()">${host?'Batalkan room':'Keluar room'}</button></div>`},
 mon:()=>{const r=ROOM||{},t=r.mode==='team',a=P.slice().sort((x,y)=>y.score-x.score||y.correct-x.correct),ts={};if(t)P.forEach(p=>ts[p.team]=(ts[p.team]||0)+p.score);
  return`<div class="wrap"><div><span class="dot${conn?'':' off'}" id="cd"></span>${conn?'Terhubung':'Terputus – mencoba lagi…'}</div><h1>🛡️ Panel Moderator</h1><p class="c">Room ${esc(RM)} · Kelas ${r.grade} · ${GL[r.subject]||''} · target ${r.target} poin</p>
@@ -245,7 +257,7 @@ function rep(){const a=grp(),t=!G.solo&&ROOM&&ROOM.mode==='team',c=G.solo?G.cfg:
 function dl(k){const h=rep(),n='hasil-clash-of-champions';
  if(k==='doc'){const b=new Blob(['\ufeff<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Hasil</title></head><body style="font-family:Arial">'+h+'</body></html>'],{type:'application/msword'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=n+'.doc';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);toast('File Word diunduh')}
  else{const f=document.createElement('iframe');f.style.cssText='position:fixed;width:0;height:0;border:0';document.body.appendChild(f);const d=f.contentDocument;d.open();d.write('<html><head><meta charset="utf-8"><title>'+n+'</title><style>body{font-family:Arial,sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #444;padding:6px;text-align:center}</style></head><body>'+h+'</body></html>');d.close();toast("Di dialog cetak, pilih 'Simpan sebagai PDF'");setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print()},400);setTimeout(()=>f.remove(),60000)}}
-function draw(){$('#app').innerHTML=SC[scr]();if(scr==='game')showQ();updConn();music()}
+function draw(){$('#app').innerHTML=SC[scr]();if(scr==='game')showQ();updConn();music();rlSync()}
 function quit(){if(confirm('Keluar dari permainan?')){window.close();toast('Sampai jumpa, juara! Kamu bisa menutup tab ini.')}}
 addEventListener('keydown',e=>{if(scr!=='game'||!G||!G.run||e.target.tagName==='INPUT')return;const k='1234'.indexOf(e.key),l='abcd'.indexOf(e.key.toLowerCase());if(e.key.length==1){if(k>=0)ans(k);else if(l>=0)ans(l);else if(e.key.toLowerCase()==='s')ans(-2)}});
 draw();
