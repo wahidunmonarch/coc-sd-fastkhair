@@ -24,7 +24,31 @@ input{width:100%;padding:12px;border-radius:12px;border:2px solid #ffffff33;back
 #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#000d;padding:10px 16px;border-radius:12px;display:none;z-index:20}
 .back{background:none;min-height:40px;padding:6px 0}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#3ddc84;margin-right:6px}.dot.off{background:#ff5d73}
 .modal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}.modal .card{width:100%;max-width:420px}
-</style></head><body><div id="app"></div><div id="modal"></div><div id="toast"></div>
+
+/* ===== Latar bergerak biru-hitam-maroon + 2.5D ===== */
+body{background:#02040c}
+body::before,body::after{content:'';position:fixed;inset:-25%;z-index:-2;pointer-events:none;will-change:transform,opacity}
+body::before{background:radial-gradient(circle at 25% 20%,#2f55b8,transparent 55%),radial-gradient(circle at 80% 80%,#0a1a45,transparent 60%),linear-gradient(135deg,#0d2a6e,#050a18 60%,#000);animation:bl 48s ease-in-out infinite,dr 32s ease-in-out infinite alternate}
+body::after{background:radial-gradient(circle at 75% 25%,#8a1a3c,transparent 55%),radial-gradient(circle at 20% 85%,#4a0a22,transparent 60%),linear-gradient(315deg,#4d0b24,#08040a 60%,#000);opacity:0;animation:mr 48s ease-in-out infinite,dr 38s ease-in-out infinite alternate-reverse}
+@keyframes bl{0%,12%,88%,100%{opacity:1}32%,68%{opacity:0}}
+@keyframes mr{0%,32%,68%,100%{opacity:0}50%{opacity:1}}
+@keyframes dr{from{transform:translate3d(-4%,-3%,0) rotate(0)}to{transform:translate3d(4%,3%,0) rotate(6deg)}}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+button{--sd:#16306b;box-shadow:0 6px 0 var(--sd),0 14px 22px #0009,inset 0 2px 0 #ffffff33;transition:transform .12s,box-shadow .12s,filter .15s}
+button:hover{transform:translateY(-3px);box-shadow:0 9px 0 var(--sd),0 18px 26px #0009,inset 0 2px 0 #ffffff33}
+button:active{transform:translateY(5px);box-shadow:0 1px 0 var(--sd),0 4px 8px #0009,inset 0 2px 0 #ffffff22}
+.go{--sd:#a8480b}.alt{--sd:#0b4f86}.mc{--sd:#0a1630}.opt{--sd:#0e1f4a}.opt.ok{--sd:#0b5d33}.opt.no{--sd:#7d1a2c}.seg .on{--sd:#a8820a}
+.opt.ok,.opt.no{transform:translateY(3px);box-shadow:0 3px 0 var(--sd),0 6px 12px #0009}
+.back,.back:hover,.back:active{box-shadow:none;transform:none}
+.card{background:linear-gradient(160deg,#1a3a72ee,#0f2147ee);border:1px solid #ffffff33;border-top-color:#ffffff66;box-shadow:0 8px 0 #060e24,0 22px 40px #000b,inset 0 1px 0 #ffffff33}
+.g3d{transform:perspective(1100px) rotateX(3deg);transform-origin:50% 100%}
+.wrap>.hud>span{background:linear-gradient(#17336b,#0e2250);padding:8px 14px;border-radius:12px;border:1px solid #ffffff22;box-shadow:0 4px 0 #050c20,0 8px 14px #0008}
+.bar{box-shadow:inset 0 3px 6px #000b,0 2px 0 #ffffff1f}.bar i{transition:width .1s linear;box-shadow:inset 0 3px 0 #ffffff55,0 0 12px #19d3c588}
+.lb>div{background:linear-gradient(#ffffff1c,#ffffff0d);box-shadow:0 3px 0 #050c20}
+.fl{text-shadow:0 2px 0 #000,0 5px 0 #0007,0 10px 16px #000a}.q{text-shadow:0 2px 0 #0008}
+.pod>div{box-shadow:inset -10px 0 0 #0003,inset 0 4px 0 #ffffff44,0 10px 20px #000a}
+@media(prefers-reduced-motion:reduce){body::before,body::after{animation:none}body::after{opacity:0}#fx{display:none}}
+</style></head><body><canvas id="fx"></canvas><div id="app"></div><div id="modal"></div><div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 // ====== Konfigurasi Supabase (anon key bersifat publik; WAJIB aktifkan RLS) ======
@@ -218,7 +242,7 @@ const TABS=J=>`<div class="card"><div class="seg"><button class="${J?'':'on'}" o
 const JN=()=>`<div class="card"><h3>Gabung ke room</h3><p style="font-size:.85rem;opacity:.8">Kelas, pelajaran, dan mode sudah diatur moderator. Cukup isi nama dan kode room.</p><label>Nama pemain / kelompok</label><input maxlength=16 value="${esc(cfg.name)}" oninput="I('name',this.value)" placeholder="Nama kamu"><label>Kode room</label><input id="jc" maxlength=5 value="${esc(cfg.code)}" oninput="this.value=this.value.toUpperCase();onCode(this.value)" placeholder="ABCDE"><div id="jt">${jtH()}</div><button class="big alt" onclick="joinRoom()">Gabung</button></div>
 <div class="card"><h3>Room tersedia</h3><p style="font-size:.8rem;opacity:.7">Room buatan moderator muncul otomatis di sini. Ketuk room untuk mengisi kodenya.</p><div id="rl">${rlH()}</div></div>`;
 const SC={
-home:()=>`<div class="wrap">${logo}<div class="sub">SD FASTABIQUL KHAIRAT</div><h1>Clash of Champions</h1><p class="c" style="opacity:.8">Kompetisi akademik kelas 4, 5 &amp; 6</p>
+home:()=>`<div class="wrap">${logo}<div class="sub">SD FASTABIQUL KHAIRAT</div><p class="c" style="opacity:.8">Kompetisi akademik kelas 4, 5 &amp; 6</p>
 <div class="card"><button class="big go" onclick="go('mode')">▶ Mulai</button>${localStorage.getItem('fk_sess')?`<button class="big alt" onclick="resume()">↩ Lanjutkan room online</button>`:''}<button class="big" onclick="showSet()">⚙️ Pengaturan</button><button class="big" onclick="quit()">🚪 Keluar</button></div></div>`,
 mode:()=>`<div class="wrap"><button class="back" onclick="go('home')">← Kembali</button><h1>Pilih Mode</h1><div class="grid">
 <button class="mc" onclick="cfg.kind='solo';go('setup')"><b>🎯 Main Solo</b><small>Main sendiri, kejar skor tertinggi</small></button>
@@ -244,7 +268,7 @@ ${t?`<div class="card"><b>Skor tim:</b> ${Object.entries(ts).map(([k,v])=>`Tim $
 <div class="card"><b>Progres pemain</b>${a.map((p,k)=>`<div style="margin:12px 0"><div class="hud"><span>${k+1}. ${esc(p.name)}${t?' (Tim '+(p.team+1)+')':''}</span><span>${p.score} poin</span></div><div class="bar"><i style="width:${p.answered}%"></i></div><small>Soal ${p.answered}/100 · ✔ ${p.correct} · ✘ ${p.wrong}</small></div>`).join('')||'<p>Belum ada pemain.</p>'}</div>
 <button class="big" onclick="exitGame()">Keluar dari panel</button></div>`},
 game:()=>`<div class="wrap"><div id="pz" class="modal" style="display:none"><div class="card c"><h2>⏸️ Dijeda moderator</h2><p>Tunggu moderator melanjutkan pertandingan.</p></div></div><div class="hud"><span id="qn"></span><span>Skor: <span id="sc">0</span></span><span id="tt"></span></div><div class="bar"><i id="tb"></i></div><div class="bar" style="height:5px"><i id="prog" style="width:0;background:#ffc83d"></i></div>
-<div class="card"><div class="q" id="q"></div><div id="opts"></div><button onclick="ans(-2)" style="margin-top:6px">⏭️ Lewati (0)</button></div><div id="fb"></div>
+<div class="card g3d"><div class="q" id="q"></div><div id="opts"></div><button onclick="ans(-2)" style="margin-top:6px">⏭️ Lewati (0)</button></div><div id="fb"></div>
 <div class="card"><b>🏆 Leaderboard</b> <small style="opacity:.7">· target ${G.cfg.target}</small>${G.solo?'':'<span style="float:right"><span class="dot" id="cd"></span><span></span></span>'}<div class="lb" id="lb"></div></div><button class="back" onclick="exitGame()">Keluar</button></div>`,
 res:()=>{const a=grp(),pp=[a[1],a[0],a[2]].map((g,i)=>g&&{g,r:[1,0,2][i]}).filter(Boolean),h=[100,75,55],me=a.find(g=>g.mine)||a[0],tie=a[1]&&a[0].score===a[1].score&&a[0].correct===a[1].correct,ms=Object.entries(G.miss).sort((x,y)=>y[1]-x[1]);
  return`<div class="wrap"><h1>🏆 ${G.solo?'Hasil Akhir':esc(a[0].name)+' Menang!'}</h1>${tie?'<p class="c">Skor dan jawaban benar seri (babak tie-breaker belum tersedia).</p>':''}
@@ -263,4 +287,19 @@ function draw(){$('#app').innerHTML=SC[scr]();if(scr==='game')showQ();updConn();
 function quit(){if(confirm('Keluar dari permainan?')){window.close();toast('Sampai jumpa, juara! Kamu bisa menutup tab ini.')}}
 addEventListener('keydown',e=>{if(scr!=='game'||!G||!G.run||e.target.tagName==='INPUT')return;const k='1234'.indexOf(e.key),l='abcd'.indexOf(e.key.toLowerCase());if(e.key.length==1){if(k>=0)ans(k);else if(l>=0)ans(l);else if(e.key.toLowerCase()==='s')ans(-2)}});
 draw();
-</script></body></html>
+</script>
+<script>
+// Animasi atom & molekul di latar
+(function(){const c=document.getElementById('fx');if(!c)return;const x=c.getContext('2d'),rm=matchMedia('(prefers-reduced-motion:reduce)').matches,R=(a,b)=>a+Math.random()*(b-a);let W,H,S=[],last=0,T=0;
+function rs(){const d=Math.min(devicePixelRatio||1,1.5);W=innerWidth;H=innerHeight;c.width=W*d;c.height=H*d;x.setTransform(d,0,0,d,0,0)}
+function mk(){S=[];const n=Math.max(5,Math.min(10,Math.round(W/190)));for(let i=0;i<n;i++)S.push({a:i%2==0,x:R(0,W),y:R(0,H),vx:R(-.15,.15),vy:R(-.12,.12),sc:R(.6,1.3),sp:R(.5,1.2)*(Math.random()<.5?-1:1),N:Array.from({length:R(4,7)|0},()=>({x:R(-1,1),y:R(-1,1),z:R(-1,1)}))})}
+function atom(s){const r=5*s.sc,g=x.createRadialGradient(s.x,s.y,0,s.x,s.y,r*3);g.addColorStop(0,'#ffffffcc');g.addColorStop(.3,'#5ee7ffaa');g.addColorStop(1,'#5ee7ff00');x.fillStyle=g;x.beginPath();x.arc(s.x,s.y,r*3,0,7);x.fill();
+ for(let k=0;k<3;k++){const an=k*Math.PI/3+T*.1*s.sp,rx=48*s.sc,ry=17*s.sc;x.strokeStyle='rgba(120,190,255,.28)';x.lineWidth=1;x.beginPath();x.ellipse(s.x,s.y,rx,ry,an,0,7);x.stroke();
+ const th=T*s.sp*1.6+k*2.1,px=rx*Math.cos(th),py=ry*Math.sin(th);x.fillStyle='#8ef0ff';x.beginPath();x.arc(s.x+px*Math.cos(an)-py*Math.sin(an),s.y+px*Math.sin(an)+py*Math.cos(an),2.6*s.sc,0,7);x.fill()}}
+function mol(s){const a=T*.3*s.sp,b=T*.17*s.sp,ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b),P=s.N.map(n=>{const x1=n.x*ca-n.z*sa,z1=n.x*sa+n.z*ca,y1=n.y*cb-z1*sb,z2=n.y*sb+z1*cb,f=1/(1+z2*.3);return{X:s.x+x1*44*s.sc*f,Y:s.y+y1*44*s.sc*f,f}});
+ x.strokeStyle='rgba(255,255,255,.2)';x.lineWidth=1.5;x.beginPath();P.forEach((p,i)=>{const q=P[(i+1)%P.length];x.moveTo(p.X,p.Y);x.lineTo(q.X,q.Y);if(i%3==0){x.moveTo(p.X,p.Y);x.lineTo(P[0].X,P[0].Y)}});x.stroke();
+ P.forEach((p,i)=>{x.fillStyle=i%2?'rgba(255,120,160,.65)':'rgba(120,220,255,.65)';x.beginPath();x.arc(p.X,p.Y,(3+i%3*1.5)*s.sc*p.f,0,7);x.fill()})}
+function fr(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;T+=dt;x.clearRect(0,0,W,H);for(const s of S){if(!rm){s.x+=s.vx*dt*60;s.y+=s.vy*dt*60;if(s.x<-120)s.x=W+120;if(s.x>W+120)s.x=-120;if(s.y<-120)s.y=H+120;if(s.y>H+120)s.y=-120}s.a?atom(s):mol(s)}if(!rm)requestAnimationFrame(fr)}
+rs();mk();addEventListener('resize',()=>{rs();mk()});requestAnimationFrame(fr)})();
+</script>
+</body></html>
